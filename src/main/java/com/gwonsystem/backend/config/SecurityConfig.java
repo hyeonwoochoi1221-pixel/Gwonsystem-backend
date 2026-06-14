@@ -19,17 +19,24 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // 1. CORS 설정을 직접 커스텀한 소스(아래 bean)로 지정합니다.
+                // 1. CORS 설정
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // 2. REST API 환경이므로 CSRF 보안을 비활성화합니다. (안 끄면 POST, PUT 요청 시 403 유발)
+                // 2. CSRF 비활성화
                 .csrf(csrf -> csrf.disable())
 
-                // 3. API 접근 권한 설정
+                // 3. API 및 Swagger 접근 권한 허용
                 .authorizeHttpRequests(auth -> auth
-                        // 프론트에서 호출하는 /api/ 로 시작하는 모든 주소는 로그인 없이 허용합니다.
-                        .requestMatchers("/api/**").permitAll()
-                        // 그 외의 모든 요청은 인증(로그인)을 받아야 합니다.
+                        // 기존 /api/** 에 더해 Swagger 전용 주소들을 패스(허용)시킵니다.
+                        .requestMatchers(
+                                "/api/**",
+                                "/swagger-ui/**",
+                                "/v3/api-docs/**",
+                                "/swagger-resources/**",
+                                "/webjars/**"
+                        ).permitAll()
+
+                        // 그 외의 모든 요청은 여전히 보안 통제
                         .anyRequest().authenticated()
                 );
 
@@ -51,4 +58,6 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration); // 모든 API 경로에 적용
         return source;
     }
+
+
 }
