@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:3000") // 프론트엔드 포트 번호에 맞게 설정 (CORS 허용)
+@CrossOrigin(origins = "http://localhost:5173")
 public class TestUserController {
 
     private final TestUserRepository testUserRepository;
@@ -28,5 +28,11 @@ public class TestUserController {
 
         // 저장된 결과 반환
         return ResponseEntity.ok(savedUser);
+    }
+
+    @GetMapping
+    public ResponseEntity<java.util.List<TestUser>> getAllUsers() {
+        // DB(Supabase)에 있는 모든 유저 정보를 가져와 반환합니다.
+        return ResponseEntity.ok(testUserRepository.findAll());
     }
 }
