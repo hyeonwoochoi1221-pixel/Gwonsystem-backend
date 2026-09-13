@@ -1,5 +1,6 @@
 package com.gwonsystem.backend.service;
 
+import com.gwonsystem.backend.dto.LoginResponse;
 import com.gwonsystem.backend.dto.RegisterRequest;
 import com.gwonsystem.backend.dto.RoleUpdateRequest;
 import com.gwonsystem.backend.entity.Member;
@@ -17,9 +18,9 @@ public class MemberService {
 
     private final MemberRepository memberRepository;
 
-    // 1. 로그인 검증 메서드 (★ 에러 해결 핵심)
+    // 1. 로그인 검증 및 DTO 반환 (DB first_name, last_name, role 문자열 매핑)
     @Transactional(readOnly = true)
-    public Member login(String username, String rawPassword) {
+    public LoginResponse login(String username, String rawPassword) {
         Member member = memberRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 아이디입니다."));
 
@@ -28,7 +29,15 @@ public class MemberService {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
         }
 
-        return member;
+        // member.getRole()이 Role Enum 객체이므로 안전하게 .name()으로 String 변환
+        String roleStr = (member.getRole() != null) ? member.getRole().name() : Role.ROLE_ASSOCIATE.name();
+
+        return LoginResponse.builder()
+                .username(member.getUsername())
+                .lastName(member.getLastName())
+                .firstName(member.getFirstName())
+                .role(roleStr)
+                .build();
     }
 
     // 2. 신규 회원가입 (기본 일반회원 ROLE_ASSOCIATE 발급)
