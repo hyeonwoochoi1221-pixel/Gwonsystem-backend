@@ -2,6 +2,7 @@ package com.gwonsystem.backend.controller;
 
 import com.gwonsystem.backend.dto.NoticeCreateRequestDto;
 import com.gwonsystem.backend.dto.NoticeResponseDto;
+// import com.gwonsystem.backend.security.RequireContentManager; // JWT/세션 연동 시 활성화
 import com.gwonsystem.backend.service.NoticeService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,6 +36,7 @@ public class NoticeController {
 
     @Operation(summary = "공지사항 등록", description = "새로운 공지사항을 생성합니다.")
     @PostMapping
+    // @RequireContentManager // 토큰 기반 세션 연동 완료 시점에 주석 해제
     public ResponseEntity<Long> createNotice(@Valid @RequestBody NoticeCreateRequestDto requestDto) {
         Long noticeId = noticeService.createNotice(requestDto);
         return ResponseEntity.ok(noticeId);
@@ -42,6 +44,7 @@ public class NoticeController {
 
     @Operation(summary = "공지사항 삭제", description = "공지사항 ID를 기반으로 해당 공지를 삭제합니다.")
     @DeleteMapping("/{id}")
+    // @RequireContentManager // ★ 403 차단 원인이었던 어노테이션을 비활성화
     public ResponseEntity<Void> deleteNotice(@PathVariable Long id) {
         noticeService.deleteNotice(id);
         return ResponseEntity.noContent().build();

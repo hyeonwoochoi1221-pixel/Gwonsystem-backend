@@ -2,8 +2,13 @@ package com.gwonsystem.backend.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -14,50 +19,68 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
+
+    @Bean
+    public RoleHierarchy roleHierarchy() {
+        RoleHierarchyImpl hierarchy = new RoleHierarchyImpl();
+        hierarchy.setHierarchy(
+                "ROLE_SUPERVISOR > ROLE_REGULAR\n" +
+                        "ROLE_REGULAR > ROLE_ASSOCIATE"
+        );
+        return hierarchy;
+    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // 1. CORS 설정
+                // 1. CORS 설정 적용 (아래 선언된 corsConfigurationSource 빈 호출)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // 2. CSRF 비활성화
-                .csrf(csrf -> csrf.disable())
+                // 2. CSRF, 기본 폼로그인, HTTP Basic 비활성화
+                .csrf(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
 
-                // 3. API 및 Swagger 접근 권한 허용
+                // 3. 인가 규칙 설정
                 .authorizeHttpRequests(auth -> auth
-                        // 기존 /api/** 에 더해 Swagger 전용 주소들을 패스(허용)시킵니다.
+                        // 회원가입 및 로그인 허용
+                        .requestMatchers("/api/members/**").permitAll()
+
+                        // 공지사항 등록/수정/삭제 요청 허용 (403 삭제 방지)
+                        .requestMatchers("/api/notices/**").permitAll()
+
+                        // 기타 전체 조회(GET) 허용
+                        .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
+
+                        // Swagger UI 및 문서 허용
                         .requestMatchers(
-                                "/api/**",
                                 "/swagger-ui/**",
+                                "/swagger-ui.html",
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
                                 "/webjars/**"
                         ).permitAll()
 
-                        // 그 외의 모든 요청은 여전히 보안 통제
+                        // 그 외 모든 요청은 인증 필요
                         .anyRequest().authenticated()
                 );
 
         return http.build();
     }
 
-    // 💡 핵심: Vercel 주소 및 모든 메서드를 허용하는 CORS 설정입니다.
+    // ★ [핵심] 이 메서드가 누락되어 Cannot resolve method 에러가 발생했습니다
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-
-        // 특정 주소만 허용하고 싶다면 아래와 같이 작성하고, 테스트 단계라면 "*"를 쓰셔도 됩니다.
         configuration.setAllowedOriginPatterns(List.of("*"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true); // 쿠키나 인증 헤더를 허용할 때 필수 설정
+        configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration); // 모든 API 경로에 적용
+        source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-
-
 }
