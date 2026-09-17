@@ -37,4 +37,7 @@ build/
 *.log
 
 ### Environment / Secrets ###
-src/main/resources/application.properties
+# Render 등 클라우드 배포 시 환경 변수(${...})를 주입받아 구동하려면
+# application.properties가 저장소에 포함되어 있어야 합니다.
+# src/main/resources/application-local.properties
+# .env
