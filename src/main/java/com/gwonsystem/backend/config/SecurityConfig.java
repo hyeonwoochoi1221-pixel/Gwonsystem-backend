@@ -60,21 +60,18 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
-                        // 🌟 CORS Preflight (OPTIONS) 무조건 전체 허용
+                        // 🌟 1. 브라우저 CORS Preflight (OPTIONS) 전면 허용
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 🌟 회원가입, 로그인, 아이디 중복확인, 이메일 인증(발송/검증), 찾기 관련 전체 허용
+                        // 🌟 2. 관리자(슈퍼바이저) 전용 엔드포인트를 "가장 먼저" 검사 (우선순위 1위)
                         .requestMatchers(
-                                "/api/members/register",
-                                "/api/members/login",
-                                "/api/members/check-username",
-                                "/api/members/email/**",
-                                "/api/members/find-username",
-                                "/api/members/password/**"
-                        ).permitAll()
+                                "/api/members/admin/**",
+                                "/api/members/*/role",
+                                "/api/members/*/org-info"
+                        ).hasRole("SUPERVISOR")
 
-                        // 스프링 기본 에러 경로 및 파비콘
-                        .requestMatchers("/error", "/favicon.ico").permitAll()
+                        // 🌟 3. 관리자 경로를 제외한 모든 회원 기능(가입, 중복확인, 이메일, 비번찾기 등) 전면 허용
+                        .requestMatchers("/api/members/**").permitAll()
 
                         // 소셜 로그인 엔드포인트 전체 허용
                         .requestMatchers(
@@ -83,18 +80,14 @@ public class SecurityConfig {
                                 "/login/**"
                         ).permitAll()
 
+                        // 스프링 기본 에러 경로 및 파비콘
+                        .requestMatchers("/error", "/favicon.ico").permitAll()
+
                         // 공지사항 인가 규칙
                         .requestMatchers(HttpMethod.GET, "/api/notices/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/notices/**").hasAnyRole("REGULAR", "SUPERVISOR")
                         .requestMatchers(HttpMethod.PUT, "/api/notices/**").hasAnyRole("REGULAR", "SUPERVISOR")
                         .requestMatchers(HttpMethod.DELETE, "/api/notices/**").hasAnyRole("REGULAR", "SUPERVISOR")
-
-                        // 관리자 전용 엔드포인트
-                        .requestMatchers(
-                                "/api/members/admin/**",
-                                "/api/members/*/role",
-                                "/api/members/*/org-info"
-                        ).hasRole("SUPERVISOR")
 
                         // Swagger 및 OpenAPI UI
                         .requestMatchers(
@@ -120,12 +113,11 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // 🌟 안전하고 완벽하게 개방된 CORS 설정
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 1. 로컬 개발 환경 및 Vercel 배포 도메인 패턴 허용
+        // 로컬 개발 환경 및 Vercel, Render 배포 도메인 허용
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:5173",
                 "http://127.0.0.1:5173",
@@ -133,13 +125,8 @@ public class SecurityConfig {
                 "https://gwonsystem-backend.onrender.com"
         ));
 
-        // 2. 모든 HTTP 메서드 허용
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-
-        // 3. 브라우저가 보내는 모든 요청 헤더 허용
         configuration.setAllowedHeaders(List.of("*"));
-
-        // 4. 쿠키 및 Authorization 헤더 전송 허용
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
