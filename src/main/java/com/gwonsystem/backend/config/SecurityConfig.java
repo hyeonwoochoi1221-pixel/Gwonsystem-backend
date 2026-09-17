@@ -129,12 +129,15 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // 로컬(5173), Vercel 배포 도메인, Render 도메인 허용
+        // 🌟 운영 도메인(gwonsystem.com, www.gwonsystem.com) 및 배포 도메인 전체 등록
         configuration.setAllowedOriginPatterns(List.of(
                 "http://localhost:5173",
                 "http://127.0.0.1:5173",
                 "https://*.vercel.app",
-                "https://gwonsystem-backend.onrender.com"
+                "https://gwonsystem-backend.onrender.com",
+                "https://www.gwonsystem.com",
+                "https://gwonsystem.com",
+                "https://*.gwonsystem.com"
         ));
 
         // 모든 HTTP 메서드 허용
