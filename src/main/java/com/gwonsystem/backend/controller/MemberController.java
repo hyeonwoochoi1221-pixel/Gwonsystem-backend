@@ -15,7 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Tag(name = "Member API", description = "회원 가입, 로그인, 아이디/비밀번호 찾기 및 권한 관리 API")
+@Tag(name = "Member API", description = "회원 가입, 로그인, 개인정보 수정 및 권한 관리 API")
 @RestController
 @RequestMapping("/api/members")
 @RequiredArgsConstructor
@@ -36,8 +36,7 @@ public class MemberController {
             response.put("username", saved.getUsername());
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
-            Map<String, String> error = Collections.singletonMap("message", e.getMessage());
-            return ResponseEntity.badRequest().body(error);
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 
@@ -60,12 +59,11 @@ public class MemberController {
             LoginResponse response = memberService.login(request.getUsername(), request.getPassword());
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
-            Map<String, String> error = Collections.singletonMap("message", e.getMessage());
-            return ResponseEntity.badRequest().body(error);
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 
-    // 2-1. 아이디 찾기 API (인적사항 확인 후 이메일로 발송)
+    // 2-1. 아이디 찾기 API
     @Operation(summary = "아이디 찾기", description = "성명, 연락처, 이메일을 대조하여 일치할 경우 해당 이메일로 아이디를 전송합니다.")
     @PostMapping("/find-username")
     public ResponseEntity<?> findUsername(@Valid @RequestBody FindUsernameRequest request) {
@@ -77,7 +75,7 @@ public class MemberController {
         }
     }
 
-    // 2-2. 비밀번호 재설정 1단계 (인증코드 발송)
+    // 2-2. 비밀번호 재설정 1단계
     @Operation(summary = "비밀번호 재설정 인증코드 발송", description = "아이디와 이메일이 일치하는지 검증 후 6자리 인증코드를 전송합니다.")
     @PostMapping("/password/send-code")
     public ResponseEntity<?> sendPasswordResetCode(@Valid @RequestBody PasswordResetSendCodeRequest request) {
@@ -89,13 +87,57 @@ public class MemberController {
         }
     }
 
-    // 2-3. 비밀번호 재설정 2단계 (인증코드 검증 및 비밀번호 변경)
+    // 2-3. 비밀번호 재설정 2단계
     @Operation(summary = "비밀번호 재설정 확정", description = "인증번호를 확인하고 새로운 비밀번호로 변경합니다.")
     @PostMapping("/password/reset")
     public ResponseEntity<?> resetPassword(@Valid @RequestBody PasswordResetConfirmRequest request) {
         try {
             memberService.resetPasswordWithCode(request);
             return ResponseEntity.ok(Map.of("message", "비밀번호가 성공적으로 변경되었습니다. 새로운 비밀번호로 로그인해 주세요."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // 🌟 2-4. [개인정보 수정 1단계] 현재 비밀번호 확인 API
+    @Operation(summary = "개인정보 수정용 비밀번호 검증", description = "회원정보 수정을 위해 본인의 현재 비밀번호가 일치하는지 검증합니다.")
+    @PostMapping("/verify-password")
+    public ResponseEntity<?> verifyCurrentPassword(@Valid @RequestBody PasswordVerifyRequest request) {
+        try {
+            boolean valid = memberService.verifyPassword(request.getUsername(), request.getPassword());
+            return ResponseEntity.ok(Map.of("verified", valid, "message", "본인 확인이 완료되었습니다."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // 🌟 2-5. [개인정보 수정 2단계] 본인 상세 프로필 조회 API
+    @Operation(summary = "본인 회원정보 조회", description = "개인정보 수정을 위해 본인의 기존 프로필 정보를 조회합니다.")
+    @GetMapping("/profile")
+    public ResponseEntity<?> getMemberProfile(@RequestParam String username) {
+        try {
+            Member member = memberService.findByUsername(username);
+            return ResponseEntity.ok(member);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // 🌟 2-6. [개인정보 수정 3단계] 프로필 정보 업데이트 API
+    @Operation(summary = "본인 회원정보 수정", description = "인적사항, 주소, 소속 정보 및 변경할 비밀번호를 저장합니다.")
+    @PutMapping("/profile")
+    public ResponseEntity<?> updateMemberProfile(
+            @RequestParam String username,
+            @RequestBody MemberAdminCreateRequest request
+    ) {
+        try {
+            Member updated = memberService.updateMemberSelfProfile(username, request);
+            return ResponseEntity.ok(Map.of(
+                    "message", "개인정보가 성공적으로 수정되었습니다.",
+                    "username", updated.getUsername(),
+                    "lastName", updated.getLastName(),
+                    "firstName", updated.getFirstName()
+            ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }

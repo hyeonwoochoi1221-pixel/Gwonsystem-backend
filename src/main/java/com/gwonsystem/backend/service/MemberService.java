@@ -144,15 +144,64 @@ public class MemberService {
         Member member = memberRepository.findByUsernameAndEmail(req.getUsername().trim(), req.getEmail().trim())
                 .orElseThrow(() -> new IllegalArgumentException("일치하는 회원 정보를 찾을 수 없습니다."));
 
-        // 1차 인증 완료 상태 확인 및 최종 소모
         emailService.consumeVerification(req.getEmail().trim(), req.getCode() != null ? req.getCode().trim() : "");
 
-        // 새 비밀번호 해시 암호화 후 반영
         member.setPassword(passwordEncoder.encode(req.getNewPassword()));
         memberRepository.save(member);
     }
 
-    // 3. 권한 / 부서 / 직급 부분 수정
+    // 🌟 2-4. [개인정보 수정 1단계]: 현재 비밀번호 일치 여부 검증
+    @Transactional(readOnly = true)
+    public boolean verifyPassword(String username, String rawPassword) {
+        Member member = memberRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+
+        boolean matches = passwordEncoder.matches(rawPassword, member.getPassword())
+                || member.getPassword().equals(rawPassword);
+
+        if (!matches) {
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+        }
+        return true;
+    }
+
+    // 🌟 2-5. [개인정보 수정 2단계]: 본인 정보 단건 조회
+    @Transactional(readOnly = true)
+    public Member findByUsername(String username) {
+        return memberRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+    }
+
+    // 🌟 2-6. [개인정보 수정 3단계]: 본인 프로필 상세 수정 (비밀번호 변경 포함)
+    @Transactional
+    public Member updateMemberSelfProfile(String username, MemberAdminCreateRequest req) {
+        Member member = findByUsername(username);
+
+        // 새 비밀번호가 입력된 경우에만 단방향 해시 암호화 후 반영
+        if (req.getPassword() != null && !req.getPassword().isBlank()) {
+            member.setPassword(passwordEncoder.encode(req.getPassword()));
+        }
+
+        // 인적사항 및 주소/소속 정보 업데이트
+        if (req.getLastName() != null) member.setLastName(req.getLastName().trim());
+        if (req.getFirstName() != null) member.setFirstName(req.getFirstName().trim());
+        if (req.getPhone() != null) member.setPhone(req.getPhone().trim());
+        if (req.getGender() != null) member.setGender(req.getGender());
+        if (req.getBirthDate() != null) member.setBirthDate(req.getBirthDate());
+
+        if (req.getZipcode() != null) member.setZipcode(req.getZipcode());
+        if (req.getAddress() != null) member.setAddress(req.getAddress());
+        if (req.getDetailAddress() != null) member.setDetailAddress(req.getDetailAddress());
+
+        if (req.getWorkplaceName() != null) member.setWorkplaceName(req.getWorkplaceName());
+        if (req.getDepartmentName() != null) member.setDepartmentName(req.getDepartmentName());
+        if (req.getPosition() != null) member.setPosition(req.getPosition());
+        if (req.getWorkplacePhone() != null) member.setWorkplacePhone(req.getWorkplacePhone());
+
+        return memberRepository.save(member);
+    }
+
+    // 3. 권한 / 부서 / 직급 부분 수정 (관리자용)
     @Transactional
     public Member updateMemberRole(Long targetMemberId, MemberAdminCreateRequest req) {
         Member member = memberRepository.findById(targetMemberId)
