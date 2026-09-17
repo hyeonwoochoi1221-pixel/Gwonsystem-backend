@@ -44,12 +44,13 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                // 1. CORS 활성화
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
 
-                // 🌟 미인증 시 302 리다이렉트(GET /login 유발)를 방지하고 순수 401 반환
+                // 2. 미인증 시 302 리다이렉트 방지 (순수 401 반환)
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setContentType("application/json;charset=UTF-8");
@@ -59,10 +60,10 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
-                        // 🌟 1. 브라우저 CORS Preflight (OPTIONS) 무조건 전체 허용 (필수)
+                        // 🌟 CORS Preflight (OPTIONS) 무조건 전체 허용
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 🌟 2. 회원가입, 로그인, 아이디 중복확인, 이메일 OTP, 아이디/비밀번호 찾기 전체 허용
+                        // 🌟 회원가입, 로그인, 아이디 중복확인, 이메일 인증(발송/검증), 찾기 관련 전체 허용
                         .requestMatchers(
                                 "/api/members/register",
                                 "/api/members/login",
@@ -119,13 +120,26 @@ public class SecurityConfig {
         return http.build();
     }
 
+    // 🌟 안전하고 완벽하게 개방된 CORS 설정
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Vite 개발 서버(5173) 및 프로덕션 도메인 허용
-        configuration.setAllowedOriginPatterns(List.of("http://localhost:5173", "http://127.0.0.1:5173", "*"));
+
+        // 1. 로컬 개발 환경 및 Vercel 배포 도메인 패턴 허용
+        configuration.setAllowedOriginPatterns(List.of(
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+                "https://*.vercel.app",
+                "https://gwonsystem-backend.onrender.com"
+        ));
+
+        // 2. 모든 HTTP 메서드 허용
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type"));
+
+        // 3. 브라우저가 보내는 모든 요청 헤더 허용
+        configuration.setAllowedHeaders(List.of("*"));
+
+        // 4. 쿠키 및 Authorization 헤더 전송 허용
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
