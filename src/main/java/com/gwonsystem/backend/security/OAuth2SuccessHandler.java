@@ -88,6 +88,11 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             }
         }
 
+        if ("google".equalsIgnoreCase(registrationId) && !Boolean.TRUE.equals(oAuth2User.getAttribute("email_verified"))) {
+            getRedirectStrategy().sendRedirect(request, response, frontendUrl + "/login?error=unverified-email");
+            return;
+        }
+
         final String finalEmail = (email != null) ? email.trim() : "";
         final String finalLastName = (lastName != null) ? lastName.trim() : "";
         final String finalFirstName = (firstName != null) ? firstName.trim() : "";
@@ -104,7 +109,10 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         if (existingMemberOpt.isPresent()) {
             // [A] 이미 가입된 회원이 존재할 때: 소셜 연동 정보 업데이트 후 메인 콜백(/oauth/callback)으로 이동
             Member member = existingMemberOpt.get();
-            member.linkSocialAccount(finalProvider, finalProviderId);
+            if (!finalProvider.equals(member.getProvider()) || !finalProviderId.equals(member.getProviderId())) {
+                getRedirectStrategy().sendRedirect(request, response, frontendUrl + "/login?error=account-link-required");
+                return;
+            }
 
             if (member.getLastName() == null || member.getLastName().isBlank()) {
                 member.setLastName(finalLastName);
@@ -113,6 +121,11 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 member.setFirstName(finalFirstName);
             }
             memberRepository.save(member);
+            var context = org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
+            context.setAuthentication(new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(member.getUsername(), null,
+                    java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority(member.getRole().name()))));
+            org.springframework.security.core.context.SecurityContextHolder.setContext(context);
+            request.getSession().setAttribute(org.springframework.security.web.context.HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
 
             String redirectUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/oauth/callback")
                     .queryParam("username", member.getUsername())
@@ -125,6 +138,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
             getRedirectStrategy().sendRedirect(request, response, redirectUrl);
         } else {
             // [B] 기존 회원이 없을 때: 빈 계정을 만들지 않고 소셜 정보를 들고 회원가입 화면(/register)으로 이동
+            request.getSession().setAttribute("pendingSocial", Map.of("email", finalEmail, "provider", finalProvider, "providerId", finalProviderId, "createdAt", Long.toString(System.currentTimeMillis())));
             String registerRedirectUrl = UriComponentsBuilder.fromUriString(frontendUrl + "/register")
                     .queryParam("socialEmail", URLEncoder.encode(finalEmail, StandardCharsets.UTF_8))
                     .queryParam("socialLastName", URLEncoder.encode(finalLastName, StandardCharsets.UTF_8))

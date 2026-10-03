@@ -10,6 +10,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.csrf.CsrfToken;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -19,17 +27,40 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/members")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class MemberController {
 
     private final MemberService memberService;
 
+    @GetMapping("/csrf")
+    public Map<String, String> csrf(CsrfToken token) { return Map.of("token", token.getToken(), "headerName", token.getHeaderName()); }
+
+    @GetMapping("/me")
+    public LoginResponse me(Authentication authentication) {
+        Member member = memberService.findByUsername(authentication.getName());
+        return LoginResponse.builder().username(member.getUsername()).lastName(member.getLastName()).firstName(member.getFirstName()).role(member.getRole().name()).build();
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session != null) session.invalidate();
+        SecurityContextHolder.clearContext();
+        return ResponseEntity.ok(Map.of("message", "로그아웃되었습니다."));
+    }
+
     // 1. 신규 회원가입
     @Operation(summary = "신규 회원가입", description = "새로운 일반회원 계정을 생성합니다.")
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request, HttpSession session) {
         try {
+            Object pending = session.getAttribute("pendingSocial");
+            request.setProvider(null); request.setProviderId(null);
+            if (pending instanceof Map<?, ?> social && request.getEmail().equalsIgnoreCase((String) social.get("email"))
+                    && System.currentTimeMillis() - Long.parseLong((String) social.get("createdAt")) < 600000) {
+                request.setProvider((String) social.get("provider")); request.setProviderId((String) social.get("providerId"));
+            }
             Member saved = memberService.register(request);
+            session.removeAttribute("pendingSocial");
             Map<String, Object> response = new HashMap<>();
             response.put("message", "회원가입이 완료되었습니다.");
             response.put("memberId", saved.getId());
@@ -54,9 +85,15 @@ public class MemberController {
     // 2. 로그인 API
     @Operation(summary = "로그인", description = "아이디와 비밀번호를 검증하고 회원 프로필 정보를 반환합니다.")
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request, HttpServletRequest servletRequest) {
         try {
             LoginResponse response = memberService.login(request.getUsername(), request.getPassword());
+            HttpSession old = servletRequest.getSession(false);
+            if (old != null) old.invalidate();
+            var context = SecurityContextHolder.createEmptyContext();
+            context.setAuthentication(new UsernamePasswordAuthenticationToken(response.getUsername(), null, List.of(new SimpleGrantedAuthority(response.getRole()))));
+            SecurityContextHolder.setContext(context);
+            servletRequest.getSession(true).setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, context);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -102,9 +139,10 @@ public class MemberController {
     // 🌟 2-4. [개인정보 수정 1단계] 현재 비밀번호 확인 API
     @Operation(summary = "개인정보 수정용 비밀번호 검증", description = "회원정보 수정을 위해 본인의 현재 비밀번호가 일치하는지 검증합니다.")
     @PostMapping("/verify-password")
-    public ResponseEntity<?> verifyCurrentPassword(@Valid @RequestBody PasswordVerifyRequest request) {
+    public ResponseEntity<?> verifyCurrentPassword(@Valid @RequestBody PasswordVerifyRequest request, Authentication authentication, HttpSession session) {
         try {
-            boolean valid = memberService.verifyPassword(request.getUsername(), request.getPassword());
+            boolean valid = memberService.verifyPassword(authentication.getName(), request.getPassword());
+            session.setAttribute("profileVerifiedAt", System.currentTimeMillis());
             return ResponseEntity.ok(Map.of("verified", valid, "message", "본인 확인이 완료되었습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -114,9 +152,9 @@ public class MemberController {
     // 🌟 2-5. [개인정보 수정 2단계] 본인 상세 프로필 조회 API
     @Operation(summary = "본인 회원정보 조회", description = "개인정보 수정을 위해 본인의 기존 프로필 정보를 조회합니다.")
     @GetMapping("/profile")
-    public ResponseEntity<?> getMemberProfile(@RequestParam String username) {
+    public ResponseEntity<?> getMemberProfile(Authentication authentication) {
         try {
-            Member member = memberService.findByUsername(username);
+            Member member = memberService.findByUsername(authentication.getName());
             return ResponseEntity.ok(member);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -127,11 +165,15 @@ public class MemberController {
     @Operation(summary = "본인 회원정보 수정", description = "인적사항, 주소, 소속 정보 및 변경할 비밀번호를 저장합니다.")
     @PutMapping("/profile")
     public ResponseEntity<?> updateMemberProfile(
-            @RequestParam String username,
+            Authentication authentication, HttpSession session,
             @RequestBody MemberAdminCreateRequest request
     ) {
         try {
-            Member updated = memberService.updateMemberSelfProfile(username, request);
+            Object verifiedAt = session.getAttribute("profileVerifiedAt");
+            if (!(verifiedAt instanceof Long) || System.currentTimeMillis() - (Long) verifiedAt > 300000)
+                return ResponseEntity.status(403).body(Map.of("message", "현재 비밀번호를 다시 확인해 주세요."));
+            Member updated = memberService.updateMemberSelfProfile(authentication.getName(), request);
+            session.removeAttribute("profileVerifiedAt");
             return ResponseEntity.ok(Map.of(
                     "message", "개인정보가 성공적으로 수정되었습니다.",
                     "username", updated.getUsername(),

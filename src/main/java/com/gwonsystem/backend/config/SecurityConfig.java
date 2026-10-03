@@ -20,6 +20,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import org.springframework.beans.factory.annotation.Value;
 import java.util.Arrays;
 import java.util.List;
 
@@ -28,6 +29,9 @@ import java.util.List;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    @Value("${app.cors.allowed-origins:http://localhost:5173,http://127.0.0.1:5173,https://gwonsystem.com,https://www.gwonsystem.com}")
+    private String allowedOrigins;
 
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
@@ -46,7 +50,7 @@ public class SecurityConfig {
         http
                 // 1. CORS 및 기본 보안 비활성화
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(csrf -> {})
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
 
@@ -68,6 +72,8 @@ public class SecurityConfig {
 
                         // 🌟 [우선순위 3] 관리자(슈퍼바이저) 전용 경로를 일반 회원 허용 규칙보다 먼저 검사
                         .requestMatchers(
+                                "/api/members",
+                                "/api/users/**",
                                 "/api/members/admin/**",
                                 "/api/members/*/role",
                                 "/api/members/*/org-info"
@@ -81,9 +87,7 @@ public class SecurityConfig {
                                 "/api/members/email/**",
                                 "/api/members/find-username",
                                 "/api/members/password/**",
-                                "/api/members/verify-password",
-                                "/api/members/profile",
-                                "/api/members/**"
+                                "/api/members/csrf"
                         ).permitAll()
 
                         // 공지사항 등록/수정/삭제 권한 통제
@@ -111,7 +115,7 @@ public class SecurityConfig {
                         ).permitAll()
 
                         // 일반 조회용 GET API 전체 허용
-                        .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/**").authenticated()
 
                         // 그 외 모든 요청은 인증 필요
                         .anyRequest().authenticated()
@@ -130,15 +134,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // 🌟 운영 도메인(gwonsystem.com, www.gwonsystem.com) 및 배포 도메인 전체 등록
-        configuration.setAllowedOriginPatterns(List.of(
-                "http://localhost:5173",
-                "http://127.0.0.1:5173",
-                "https://*.vercel.app",
-                "https://gwonsystem-backend.onrender.com",
-                "https://www.gwonsystem.com",
-                "https://gwonsystem.com",
-                "https://*.gwonsystem.com"
-        ));
+        configuration.setAllowedOrigins(Arrays.stream(allowedOrigins.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList());
 
         // 모든 HTTP 메서드 허용
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));

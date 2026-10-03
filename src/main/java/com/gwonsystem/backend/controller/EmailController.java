@@ -17,7 +17,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/members/email")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class EmailController {
 
     private final EmailService emailService;
@@ -32,6 +31,11 @@ public class EmailController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Collections.singletonMap("message", e.getMessage()));
         }
+    }
+
+    @PostMapping("/verify-reset-code")
+    public ResponseEntity<?> verifyResetCode(@Valid @RequestBody EmailVerifyRequest request) {
+        return ResponseEntity.ok(Map.of("verified", emailService.verifyCode(request.getEmail(), request.getCode(), "PW_RESET")));
     }
 
     // 2. 이메일 6자리 인증코드 검증

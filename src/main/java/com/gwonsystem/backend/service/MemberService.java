@@ -27,8 +27,7 @@ public class MemberService {
         Member member = memberRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 아이디입니다."));
 
-        boolean passwordMatches = passwordEncoder.matches(rawPassword, member.getPassword())
-                || member.getPassword().equals(rawPassword);
+        boolean passwordMatches = member.getPassword() != null && passwordEncoder.matches(rawPassword, member.getPassword());
 
         if (!passwordMatches) {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
@@ -82,6 +81,7 @@ public class MemberService {
             throw new IllegalArgumentException("이미 등록된 전화번호입니다.");
         }
 
+        emailService.consumeRegistration(req.getEmail(), req.getCode());
         Member member = new Member();
         member.setUsername(req.getUsername());
         member.setPassword(passwordEncoder.encode(req.getPassword()));
@@ -100,10 +100,9 @@ public class MemberService {
         member.setPosition(req.getPosition());
         member.setWorkplacePhone(req.getWorkplacePhone());
 
-        if (req.getProvider() != null && !req.getProvider().isBlank()) {
-            member.linkSocialAccount(req.getProvider(), req.getProviderId());
-        }
 
+
+        if (req.getProvider() != null && req.getProviderId() != null) member.linkSocialAccount(req.getProvider(), req.getProviderId());
         member.setRole(Role.ROLE_ASSOCIATE);
         member.setTermsAgreed(req.getTermsAgreed());
         member.setPrivacyAgreed(req.getPrivacyAgreed());
@@ -156,8 +155,7 @@ public class MemberService {
         Member member = memberRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
 
-        boolean matches = passwordEncoder.matches(rawPassword, member.getPassword())
-                || member.getPassword().equals(rawPassword);
+        boolean matches = member.getPassword() != null && passwordEncoder.matches(rawPassword, member.getPassword());
 
         if (!matches) {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
@@ -239,7 +237,8 @@ public class MemberService {
             throw new IllegalArgumentException("이미 등록된 전화번호입니다.");
         }
 
-        String rawPw = (req.getPassword() != null && !req.getPassword().isBlank()) ? req.getPassword() : "12345678";
+        if (req.getPassword() == null || req.getPassword().length() < 8) throw new IllegalArgumentException("8자 이상의 비밀번호가 필요합니다.");
+        String rawPw = req.getPassword();
 
         Member member = new Member();
         member.setUsername(req.getUsername());

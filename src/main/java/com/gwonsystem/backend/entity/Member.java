@@ -24,6 +24,7 @@ public class Member {
 
     // 일반 회원은 필수이나 소셜 계정은 비밀번호가 없으므로 nullable 허용
     @Column(nullable = true)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private String password;
 
     @Column(nullable = false, unique = true, length = 100)

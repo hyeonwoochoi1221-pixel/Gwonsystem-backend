@@ -24,6 +24,9 @@ public class RegisterRequest {
     @Email(message = "유효한 이메일 형식이 아닙니다.")
     private String email;
 
+    @NotBlank
+    private String code;
+
     @NotBlank(message = "성은 필수 항목입니다.")
     private String lastName;
 

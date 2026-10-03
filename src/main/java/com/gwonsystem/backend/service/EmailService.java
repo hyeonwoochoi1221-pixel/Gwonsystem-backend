@@ -31,6 +31,7 @@ public class EmailService {
 
     private static class VerificationEntry {
         String code;
+        int attempts;
         LocalDateTime expiresAt;
 
         VerificationEntry(String code, LocalDateTime expiresAt) {
@@ -88,80 +89,39 @@ public class EmailService {
     }
 
     // 4. 인증코드 일치 검증
-    public boolean verifyCode(String email, String inputCode, String type) {
-        String cleanEmail = normalizeEmail(email);
-        String cleanCode = (inputCode == null) ? "" : inputCode.trim();
-
-        String verifiedKey = "VERIFIED:" + cleanEmail;
-        VerificationEntry verifiedEntry = verificationStorage.get(verifiedKey);
-        if (verifiedEntry != null) {
-            if (LocalDateTime.now().isBefore(verifiedEntry.expiresAt)) {
-                log.info("이미 1차 인증을 통과한 이메일입니다: {}", cleanEmail);
-                return true;
-            } else {
-                verificationStorage.remove(verifiedKey);
-            }
+    public synchronized boolean verifyCode(String email, String inputCode, String type) {
+        String key = type + ":" + normalizeEmail(email);
+        VerificationEntry entry = verificationStorage.get(key);
+        if (entry == null || LocalDateTime.now().isAfter(entry.expiresAt)) {
+            verificationStorage.remove(key);
+            throw new IllegalArgumentException("인증번호가 만료되었습니다.");
         }
-
-        String matchedKey = null;
-        VerificationEntry entry = null;
-
-        String primaryKey = type + ":" + cleanEmail;
-        if (verificationStorage.containsKey(primaryKey)) {
-            matchedKey = primaryKey;
-            entry = verificationStorage.get(primaryKey);
-        } else {
-            String fallbackType = "REGISTER".equalsIgnoreCase(type) ? "PW_RESET" : "REGISTER";
-            String fallbackKey = fallbackType + ":" + cleanEmail;
-            if (verificationStorage.containsKey(fallbackKey)) {
-                matchedKey = fallbackKey;
-                entry = verificationStorage.get(fallbackKey);
-            }
+        if (++entry.attempts > 5) {
+            verificationStorage.remove(key);
+            throw new IllegalArgumentException("인증 시도 횟수를 초과했습니다.");
         }
-
-        if (entry == null) {
-            log.warn("인증 실패 - 키 미존재: email={}, type={}, 현재보관={}", cleanEmail, type, verificationStorage.keySet());
-            throw new IllegalArgumentException("인증번호가 발송되지 않았거나 만료되었습니다. 다시 발송해 주세요.");
-        }
-
-        if (LocalDateTime.now().isAfter(entry.expiresAt)) {
-            verificationStorage.remove(matchedKey);
-            throw new IllegalArgumentException("인증번호 유효시간(3분)이 초과되었습니다. 다시 발송해 주세요.");
-        }
-
-        if (!entry.code.equals(cleanCode)) {
-            throw new IllegalArgumentException("인증번호가 일치하지 않습니다. 다시 확인해 주세요.");
-        }
-
-        verificationStorage.remove(matchedKey);
-        verificationStorage.put(verifiedKey, new VerificationEntry("DONE", LocalDateTime.now().plusMinutes(VERIFIED_HOLD_MINUTES)));
-        log.info("인증코드 검증 완료 및 상태 유지 시작: key={}", verifiedKey);
+        if (!entry.code.equals(inputCode == null ? "" : inputCode.trim()))
+            throw new IllegalArgumentException("인증번호가 일치하지 않습니다.");
         return true;
     }
-
-    public boolean verifyCode(String email, String inputCode) {
-        return verifyCode(email, inputCode, "REGISTER");
+    public boolean verifyCode(String email, String code) { return verifyCode(email, code, "REGISTER"); }
+    public synchronized void consumeVerification(String email, String code) {
+        verifyCode(email, code, "PW_RESET");
+        verificationStorage.remove("PW_RESET:" + normalizeEmail(email));
     }
-
-    // 5. 최종 비밀번호 변경 시 인증 상태 소모
-    public void consumeVerification(String email, String code) {
-        String cleanEmail = normalizeEmail(email);
-        String verifiedKey = "VERIFIED:" + cleanEmail;
-        VerificationEntry verifiedEntry = verificationStorage.get(verifiedKey);
-
-        if (verifiedEntry != null && LocalDateTime.now().isBefore(verifiedEntry.expiresAt)) {
-            verificationStorage.remove(verifiedKey);
-            log.info("비밀번호 변경을 위해 인증 상태를 소모했습니다: {}", cleanEmail);
-            return;
-        }
-
-        verifyCode(cleanEmail, code, "PW_RESET");
-        verificationStorage.remove(verifiedKey);
+    public synchronized void consumeRegistration(String email, String code) {
+        verifyCode(email, code, "REGISTER");
+        verificationStorage.remove("REGISTER:" + normalizeEmail(email));
     }
 
     // 6. 이메일 발송 실행부
-    private void sendOtpMail(String toEmail, String type, String subject) {
+    private synchronized void sendOtpMail(String toEmail, String type, String subject) {
         String cleanEmail = normalizeEmail(toEmail);
+        verificationStorage.entrySet().removeIf(e -> LocalDateTime.now().isAfter(e.getValue().expiresAt));
+        VerificationEntry previous = verificationStorage.get(type + ":" + cleanEmail);
+        if (previous != null && previous.expiresAt.minusMinutes(EXPIRATION_MINUTES).plusSeconds(60).isAfter(LocalDateTime.now()))
+            throw new IllegalArgumentException("인증번호 재발송은 60초 후 가능합니다.");
+        if (verificationStorage.size() >= 10000) throw new IllegalArgumentException("잠시 후 다시 시도해 주세요.");
         String code = generateNumericCode();
         String key = type + ":" + cleanEmail;
         LocalDateTime expiresAt = LocalDateTime.now().plusMinutes(EXPIRATION_MINUTES);
@@ -197,7 +157,7 @@ public class EmailService {
 
             helper.setText(htmlContent, true);
             mailSender.send(message);
-            log.info("인증코드 메일 발송 성공 [{}]: key={}, code={}", type, key, code);
+            log.info("인증코드 메일 발송 성공 [{}]", type);
         } catch (MessagingException e) {
             verificationStorage.remove(key);
             log.error("메일 발송 실패: {}", e.getMessage());

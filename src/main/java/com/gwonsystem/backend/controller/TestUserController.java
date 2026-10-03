@@ -13,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:5173")
 public class TestUserController {
 
     private final TestUserRepository testUserRepository;
