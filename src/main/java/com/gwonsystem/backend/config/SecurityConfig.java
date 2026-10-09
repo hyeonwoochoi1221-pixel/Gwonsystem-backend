@@ -69,6 +69,15 @@ public class SecurityConfig {
 
                         // 🌟 [우선순위 2] 공지사항 조회 (목록 / 단건 전체) 전면 허용
                         .requestMatchers(HttpMethod.GET, "/api/notices", "/api/notices/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/banners", "/api/banners/*/image").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/banners").hasRole("SUPERVISOR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/banners/*").hasRole("SUPERVISOR")
+                         .requestMatchers(HttpMethod.GET, "/api/company-events/places").hasRole("SUPERVISOR")
+                        .requestMatchers(HttpMethod.GET, "/api/company-events").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/company-events").hasRole("SUPERVISOR")
+                        .requestMatchers(HttpMethod.GET, "/api/gallery", "/api/gallery/*/image").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/gallery").hasAnyRole("REGULAR", "SUPERVISOR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/gallery/*").hasAnyRole("REGULAR", "SUPERVISOR")
 
                         // 🌟 [우선순위 3] 관리자(슈퍼바이저) 전용 경로를 일반 회원 허용 규칙보다 먼저 검사
                         .requestMatchers(
