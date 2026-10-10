@@ -8,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
+import com.gwonsystem.backend.exception.IntegrationDisabledException;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -22,7 +24,19 @@ public class EmailService {
     private final JavaMailSender mailSender;
 
     // 🌟 Supabase Storage 공식 로고 이미지 URL
-    private static final String LOGO_IMAGE_URL = "https://zsaqpsohhwygrawphnsg.supabase.co/storage/v1/object/public/public-images/Main_Logo.png";
+    @Value("${app.email.logo-url:}")
+    private String logoImageUrl = "";
+    @Value("${app.mail.enabled:true}")
+    private boolean mailEnabled = true;
+    @Value("${app.mail.allowed-recipients:}")
+    private String allowedRecipients = "";
+
+    private void requireMail(String recipient) {
+        if (!mailEnabled) throw new IntegrationDisabledException("이메일 발송 기능이 비활성화되어 있습니다.");
+        if (!allowedRecipients.isBlank() && java.util.Arrays.stream(allowedRecipients.split(","))
+            .map(this::normalizeEmail).noneMatch(normalizeEmail(recipient)::equals))
+            throw new IntegrationDisabledException("개발 환경에서는 승인된 테스트 이메일로만 발송할 수 있습니다.");
+    }
 
     // 인증코드 및 인증완료 상태 저장소
     private final Map<String, VerificationEntry> verificationStorage = new ConcurrentHashMap<>();
@@ -56,6 +70,7 @@ public class EmailService {
 
     // 3. 아이디 찾기 완료 안내 메일 전송
     public void sendFoundUsernameEmail(String toEmail, String fullName, String username) {
+        requireMail(toEmail);
         String cleanEmail = normalizeEmail(toEmail);
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -116,6 +131,7 @@ public class EmailService {
 
     // 6. 이메일 발송 실행부
     private synchronized void sendOtpMail(String toEmail, String type, String subject) {
+        requireMail(toEmail);
         String cleanEmail = normalizeEmail(toEmail);
         verificationStorage.entrySet().removeIf(e -> LocalDateTime.now().isAfter(e.getValue().expiresAt));
         VerificationEntry previous = verificationStorage.get(type + ":" + cleanEmail);
@@ -179,7 +195,7 @@ public class EmailService {
                 + "    <tr>"
                 + "      <td style='padding: 36px 32px 24px; text-align: center; border-bottom: 1px solid #f1f5f9;'>"
                 + "        <div style='text-align: center; margin: 0 auto 14px;'>"
-                + "          <img src='" + LOGO_IMAGE_URL + "' alt='G-WON SYSTEM' style='height: 48px; width: auto; max-width: 200px; display: block; margin: 0 auto; border: 0;' />"
+                + (logoImageUrl.isBlank() ? "" : "          <img src='" + org.springframework.web.util.HtmlUtils.htmlEscape(logoImageUrl) + "' alt='G-WON SYSTEM' style='height: 48px; width: auto; max-width: 200px; display: block; margin: 0 auto; border: 0;' />")
                 + "          <span style='display: block; font-size: 19px; font-weight: 900; letter-spacing: 0.5px; color: #0f172a; margin-top: 10px; font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif;'>"
                 + "            G-WON SYSTEM"
                 + "          </span>"

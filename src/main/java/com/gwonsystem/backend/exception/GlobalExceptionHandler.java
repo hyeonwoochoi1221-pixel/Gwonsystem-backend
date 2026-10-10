@@ -13,6 +13,11 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(IntegrationDisabledException.class)
+    public ResponseEntity<Map<String, String>> handleDisabledIntegration(IntegrationDisabledException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of("message", ex.getReason()));
+    }
+
     // 1. MemberService에서 발생하는 비즈니스 유효성 예외 처리 (중복 이메일, 전화번호 등)
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>> handleIllegalArgumentException(IllegalArgumentException ex) {

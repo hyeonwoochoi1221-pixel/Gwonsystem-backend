@@ -11,12 +11,14 @@ import java.util.*;
 @Service
 public class GooglePlacesService {
  private final RestClient client; private final String key;
+ @Value("${app.places.enabled:true}") private boolean enabled = true;
  public record Place(String id,String name,String address) {}
  public GooglePlacesService(RestClient.Builder builder,@Value("${google.places.api-key:}") String key) {
   this.key=key.trim(); var factory=new SimpleClientHttpRequestFactory();factory.setConnectTimeout(5000);factory.setReadTimeout(15000);
   client=builder.baseUrl("https://places.googleapis.com/v1").requestFactory(factory).build();
  }
  public List<Place> search(String query) {
+  if(!enabled)throw new com.gwonsystem.backend.exception.IntegrationDisabledException("장소 검색 기능이 비활성화되어 있습니다.");
   if(query==null||query.trim().length()<2||query.length()>120)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"검색어는 2~120자로 입력해 주세요.");
   if(key.isBlank())throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"Google 장소 검색 설정이 필요합니다. 장소를 직접 입력하거나 관리자에게 문의해 주세요.");
   try {

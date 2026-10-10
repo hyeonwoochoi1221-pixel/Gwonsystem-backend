@@ -33,6 +33,9 @@ public class SecurityConfig {
     @Value("${app.cors.allowed-origins:http://localhost:5173,http://127.0.0.1:5173,https://gwonsystem.com,https://www.gwonsystem.com}")
     private String allowedOrigins;
 
+    @Value("${app.oauth.enabled:true}")
+    private boolean oauthEnabled = true;
+
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
     @Bean
@@ -64,6 +67,7 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/internal/health").permitAll()
                         // 🌟 [우선순위 1] 브라우저 CORS 사전 검사 (Preflight OPTIONS) 전면 허용
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
@@ -107,13 +111,9 @@ public class SecurityConfig {
                         // 스프링 기본 에러 경로 및 파비콘
                         .requestMatchers("/error", "/favicon.ico").permitAll()
 
-                        // 소셜 로그인 엔드포인트 전체 허용
-                        .requestMatchers(
-                                "/oauth2/**",
-                                "/login/oauth2/**",
-                                "/login/**"
-                        ).permitAll()
-
+                        // Disabled development OAuth must not register login filters or routes.
+                        .requestMatchers("/oauth2/**", "/login/oauth2/**", "/login/**")
+                            .access((authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(oauthEnabled))
                         // Swagger 및 OpenAPI UI
                         .requestMatchers(
                                 "/swagger-ui/**",
@@ -128,12 +128,9 @@ public class SecurityConfig {
 
                         // 그 외 모든 요청은 인증 필요
                         .anyRequest().authenticated()
-                )
-
-                // 소셜 로그인 핸들러 연동
-                .oauth2Login(oauth2 -> oauth2
-                        .successHandler(oAuth2SuccessHandler)
                 );
+
+        if (oauthEnabled) http.oauth2Login(oauth2 -> oauth2.successHandler(oAuth2SuccessHandler));
 
         return http.build();
     }
