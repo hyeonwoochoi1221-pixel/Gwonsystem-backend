@@ -105,6 +105,8 @@ class DevEnvironmentGuardTest {
     }
     @Test void rejectsJndiAndJpaSchemaGenerationBypasses() {
         for(String k:List.of("spring.datasource.jndi-name","spring.datasource.hikari.data-source-class-name",
+            "spring.datasource.hikari.data-source-properties.sslhostnameverifier",
+            "spring.datasource.hikari.data-source-properties.socketFactory",
             "spring.jpa.properties.jakarta.persistence.schema-generation.database.action")) {
             var p=settings();p.put(k,"create");assertThrows(IllegalStateException.class,()->apply(environment(p)));
         }

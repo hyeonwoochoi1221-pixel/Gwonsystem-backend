@@ -63,6 +63,8 @@ public final class DevEnvironmentGuard implements EnvironmentPostProcessor, Orde
         locked.put("spring.jpa.generate-ddl", "false");
         locked.put("spring.sql.init.mode", "never");
         locked.put("spring.datasource.hikari.connection-init-sql", "");
+        rejectIfPresent(env, "spring.datasource.hikari.data-source-properties.sslhostnameverifier",
+            "spring.datasource.hikari.data-source-properties.socketFactory");
         locked.put("spring.datasource.hikari.data-source-properties.sslmode", "verify-full");
         locked.put("spring.datasource.hikari.data-source-properties.sslfactory", "org.postgresql.ssl.DefaultJavaSSLFactory");
         // Put temporary relations after public; pg_catalog is implicitly searched first.

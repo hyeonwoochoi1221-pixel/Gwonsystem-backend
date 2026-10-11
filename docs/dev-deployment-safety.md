@@ -19,9 +19,9 @@ EnvironmentPostProcessor는 ConfigData 로딩 다음, DataSource/SMTP/OAuth Bean
 
 ## 실제 DB 연결 검사와 한계
 
-개발 DataSource를 감싸서 Hibernate 및 업무 코드에 연결을 넘기기 전에 JDBC metadata URL을 다시 승인 목록과 대조한다. 읽기 전용 트랜잭션의 SELECT로 actual `current_database()`, `current_user`, TLS 상태, 역할/DDL 권한을 확인하고 rollback 후 연결 상태를 복원한다. 다른 DB/역할, TLS 없음, SUPERUSER/CREATEDB/CREATEROLE/BYPASSRLS, public CREATE, public 객체 소유 역할의 멤버십, DB CREATE 권한은 거부한다. 대체 계정으로 getConnection을 호출하는 것도 거부한다. 검증 실패 연결은 닫는다.
+개발 DataSource를 감싸서 Hibernate 및 업무 코드에 연결을 넘기기 전에 JDBC metadata URL을 다시 승인 목록과 대조한다. 읽기 전용 트랜잭션의 SELECT로 actual `current_database()`, `current_user`, TLS 상태, 역할/DDL 권한을 확인하고 rollback 후 연결 상태를 복원한다. 다른 DB/역할, Direct 연결의 서버 TLS 없음, SUPERUSER/CREATEDB/CREATEROLE/BYPASSRLS, public CREATE, public 객체 소유 역할의 멤버십, DB CREATE 권한은 거부한다. 대체 계정으로 getConnection을 호출하는 것도 거부한다. 검증 실패 연결은 닫는다.
 
-이 검사는 문자열 검사보다 강하지만 DB 이름/역할은 서버 고유 프로젝트 ID가 아니다. Direct host의 인증서 검증과 project ref, pooler의 ref가 포함된 로그인 라우팅 및 실제 역할/DB 검사를 조합한다. 공유 pooler의 pg_stat_ssl 값은 DB 서버 쪽 연결 상태이며 client→pooler TLS는 JDBC verify-full로 보호한다. 악의적으로 설정/코드를 바꾸는 관리자까지 막는 시스템은 아니다. 승인 목록 자체는 독립적으로 검토해야 하며, 향후 새로운 운영 프로젝트가 생기면 denylist도 업데이트해야 한다.
+이 검사는 문자열 검사보다 강하지만 DB 이름/역할은 서버 고유 프로젝트 ID가 아니다. Direct host의 인증서 검증과 project ref, pooler의 ref가 포함된 로그인 라우팅 및 실제 역할/DB 검사를 조합한다. 공유 pooler의 pg_stat_ssl 값은 DB 서버 쪽 연결 상태이며 false도 허용한다. client→pooler TLS는 JDBC verify-full, Java CA 신뢰 및 호스트명 검증으로 보호한다. 자세한 구분과 한계는 [dev-pooler-tls.md](dev-pooler-tls.md)를 참고한다. 악의적으로 설정/코드를 바꾸는 관리자까지 막는 시스템은 아니다. 승인 목록 자체는 독립적으로 검토해야 하며, 향후 새로운 운영 프로젝트가 생기면 denylist도 업데이트해야 한다.
 
 개발 DB 앱 역할에는 필요한 업무 테이블의 SELECT/INSERT/UPDATE/DELETE와 전용 ID 시퀀스 사용 권한만 별도 승인 절차로 준비해야 한다. 앱 역할을 테이블·스키마 소유자로 만들거나 public/DB CREATE를 부여하면 기동하지 않는다. 이번 작업에서 역할/권한/스키마를 생성하거나 변경하지 않았다. 개발 스키마와 전용 역할이 아직 없으면 기동 실패가 정상이다.
 
