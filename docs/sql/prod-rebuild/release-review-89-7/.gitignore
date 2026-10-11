@@ -1,0 +1,3 @@
+# Raw operational metadata exports stay local; commit the reviewed summary instead.
+production-*.csv
+production-*.json

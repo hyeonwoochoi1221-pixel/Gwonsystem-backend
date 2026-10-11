@@ -1,0 +1,7 @@
+pgdata*/
+lib/
+*.class
+*.log
+*.err
+rebuild-commit.TEST-ONLY.sql
+rebuild-rollback.TEST-ONLY.sql

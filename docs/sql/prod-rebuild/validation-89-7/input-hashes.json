@@ -1,0 +1,26 @@
+[
+  {
+    "Path": "D:\\dev\\GWON_System\\backend\\notice-member-author-backend\\docs\\sql\\prod-rebuild\\01-preflight.readonly.sql",
+    "Hash": "66AB05E7CA88D6562FD1FD0B9628E4884A04730D74FAC83B2945C14785322770"
+  },
+  {
+    "Path": "D:\\dev\\GWON_System\\backend\\notice-member-author-backend\\docs\\sql\\prod-rebuild\\02-backup-manifest.readonly.sql",
+    "Hash": "8DEF5E64A12F7A7348D6B31F3CFFB7990AED25CC7CFDE7C7CA7C958344C00B3C"
+  },
+  {
+    "Path": "D:\\dev\\GWON_System\\backend\\notice-member-author-backend\\docs\\sql\\prod-rebuild\\03-rebuild.DESTRUCTIVE-DRAFT.sql",
+    "Hash": "180442C1531477755E35601B9BC823DD9E908DA465D9D5F2A1C3C457189603A0"
+  },
+  {
+    "Path": "D:\\dev\\GWON_System\\backend\\notice-member-author-backend\\docs\\sql\\prod-rebuild\\04-postflight.readonly.sql",
+    "Hash": "603E2922436F4A3AA7D96EB9C23C55395CEC99A9C4EB6B564510427F33640F91"
+  },
+  {
+    "Path": "D:\\dev\\GWON_System\\backend\\notice-member-author-backend\\docs\\sql\\prod-rebuild\\validation-89-7\\Probe.java",
+    "Hash": "3D56428E88672771862E9C12D2778D2086C8FA59092BF6AB73F32151BE8FB746"
+  },
+  {
+    "Path": "D:\\dev\\GWON_System\\backend\\notice-member-author-backend\\target\\backend-0.0.1-SNAPSHOT.jar",
+    "Hash": "7D1ED03A1E9B2AC6969EEAEB0ED8DF34CAB99CC21ACA5E51BF8CC0DF0DFD9E6A"
+  }
+]
