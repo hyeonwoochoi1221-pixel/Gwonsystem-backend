@@ -8,3 +8,4 @@ logs
 *.log
 # Local PostgreSQL validation tools and evidence are not application build inputs.
 docs/sql/prod-rebuild/validation-*/
+docs/sql/prod-rebuild/release-review-*/

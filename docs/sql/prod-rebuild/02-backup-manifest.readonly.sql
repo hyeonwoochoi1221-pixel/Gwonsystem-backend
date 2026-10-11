@@ -1,4 +1,5 @@
 -- NOT a backup. Metadata manifest only; encrypted offline pg_dump + restore rehearsal required.
+-- Historical optional inventory only. Step 89-3 does NOT require a business-data backup.
 BEGIN READ ONLY;
 SET LOCAL statement_timeout='30s';
 SELECT c.relname,c.reltuples::bigint AS estimated_rows,pg_total_relation_size(c.oid) AS bytes

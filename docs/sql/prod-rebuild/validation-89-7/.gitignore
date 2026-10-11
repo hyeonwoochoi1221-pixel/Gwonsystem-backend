@@ -1,0 +1,11 @@
+lib/
+*.class
+*.log
+*.err
+*.jks
+*.p12
+cacerts*
+invalid-ca.crt
+pgdata*/
+rebuild-commit.TEST-ONLY.sql
+rebuild-rollback.TEST-ONLY.sql

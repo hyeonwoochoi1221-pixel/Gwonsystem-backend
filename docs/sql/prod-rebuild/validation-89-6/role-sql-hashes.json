@@ -1,0 +1,14 @@
+[
+  {
+    "Path": "D:\\dev\\GWON_System\\backend\\notice-member-author-backend\\docs\\sql\\prod-rebuild\\app-role\\01-create-prod-app-role.DRAFT.sql",
+    "Hash": "1F99BC455686844D348642A5826678B08AEAD22585133ABE8B8676EFC7CB43A3"
+  },
+  {
+    "Path": "D:\\dev\\GWON_System\\backend\\notice-member-author-backend\\docs\\sql\\prod-rebuild\\app-role\\02-grants-rls.DRAFT.sql",
+    "Hash": "9EBCF8A97237865895D26FE277ECB4DEBCA594449469E1C0D016722C28A820CB"
+  },
+  {
+    "Path": "D:\\dev\\GWON_System\\backend\\notice-member-author-backend\\docs\\sql\\prod-rebuild\\app-role\\03-verify-prod-app-role.readonly.sql",
+    "Hash": "918BD07A423DD80E5553C62AF07C7F726F4F3207C9FB222EE186434052703454"
+  }
+]

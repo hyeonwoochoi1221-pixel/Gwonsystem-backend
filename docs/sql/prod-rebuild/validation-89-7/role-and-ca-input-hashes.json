@@ -1,0 +1,34 @@
+[
+  {
+    "Path": "D:\\dev\\GWON_System\\backend\\notice-member-author-backend\\docs\\sql\\prod-rebuild\\app-role\\01-create-prod-app-role.DRAFT.sql",
+    "Hash": "1F99BC455686844D348642A5826678B08AEAD22585133ABE8B8676EFC7CB43A3"
+  },
+  {
+    "Path": "D:\\dev\\GWON_System\\backend\\notice-member-author-backend\\docs\\sql\\prod-rebuild\\app-role\\02-grants-rls.DRAFT.sql",
+    "Hash": "9EBCF8A97237865895D26FE277ECB4DEBCA594449469E1C0D016722C28A820CB"
+  },
+  {
+    "Path": "D:\\dev\\GWON_System\\backend\\notice-member-author-backend\\docs\\sql\\prod-rebuild\\app-role\\03-verify-prod-app-role.readonly.sql",
+    "Hash": "918BD07A423DD80E5553C62AF07C7F726F4F3207C9FB222EE186434052703454"
+  },
+  {
+    "Path": "D:\\dev\\GWON_System\\backend\\notice-member-author-backend\\docs\\sql\\prod-rebuild\\app-role\\04-production-dependencies.readonly.sql",
+    "Hash": "CFBB2CBED6003745F67E2AB75D152B1BCC7B3D2747A948AF7AB9A85CFEB6675A"
+  },
+  {
+    "Path": "D:\\dev\\GWON_System\\backend\\notice-member-author-backend\\docs\\sql\\prod-rebuild\\app-role\\05-production-followup.readonly.sql",
+    "Hash": "A738D1B6920B8B3723548D8980E6D5CB251DEB5DAF26C8ABEF53D3BA9AE3AF79"
+  },
+  {
+    "Path": "D:\\dev\\GWON_System\\backend\\notice-member-author-backend\\docs\\sql\\prod-rebuild\\release-review-89-7\\Dockerfile.production-tls.DRAFT",
+    "Hash": "B5B3BC6E9A00003CDCB41A9564C6A1C5596D040E3634CA37162A34E60A013152"
+  },
+  {
+    "Path": "D:\\dev\\GWON_System\\backend\\notice-member-author-backend\\docker\\dev\\prod-ca-2021.crt",
+    "Hash": "1DCAAFBF6FDA7F21E34FF35825C1A1354408EA11E5839157E690AF851C73453A"
+  },
+  {
+    "Path": "D:\\dev\\GWON_System\\backend\\notice-member-author-backend\\docker\\dev\\VerifySupabaseCa.java",
+    "Hash": "D0C143D6EAE2276A09CB4072EB11C2BE46F643663EA3AC99CB76F6FFBB946F88"
+  }
+]

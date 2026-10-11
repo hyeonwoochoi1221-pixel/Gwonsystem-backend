@@ -1,0 +1,23 @@
+# Proposal only. Render ./Dockerfile and deployment configuration have NOT changed.
+# Build with repository root context. No dev profile or dev environment is set.
+FROM maven:3.9.16-eclipse-temurin-21 AS build
+WORKDIR /workspace
+COPY . .
+RUN javac -d /tmp/ca-verifier docker/dev/VerifySupabaseCa.java \
+    && java -cp /tmp/ca-verifier VerifySupabaseCa docker/dev/prod-ca-2021.crt \
+    && mvn clean package -DskipTests
+
+FROM eclipse-temurin:21-jre-jammy
+WORKDIR /app
+COPY --from=build /tmp/ca-verifier/VerifySupabaseCa.class /tmp/ca-verifier/VerifySupabaseCa.class
+COPY docker/dev/prod-ca-2021.crt /opt/supabase-ca/prod-ca-2021.crt
+# changeit is the public JDK truststore default, not a DB/API credential.
+RUN java -cp /tmp/ca-verifier VerifySupabaseCa /opt/supabase-ca/prod-ca-2021.crt \
+    && keytool -importcert -noprompt -trustcacerts -cacerts \
+       -storepass changeit -alias gwon-supabase-root-2021 \
+       -file /opt/supabase-ca/prod-ca-2021.crt \
+    && keytool -list -cacerts -storepass changeit -alias gwon-supabase-root-2021 \
+    && rm -rf /tmp/ca-verifier
+COPY --from=build /workspace/target/*-SNAPSHOT.jar /app/app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
