@@ -24,6 +24,32 @@ class NoticeHttpTest {
     @MockitoBean NoticeService notices;
     @MockitoBean OAuth2SuccessHandler oauth;
     @MockitoBean ClientRegistrationRepository registrations;
+    @Test void devNoticeAuthenticationFailuresHaveSafeHttpResponses() throws Exception {
+        var devMvc=org.springframework.test.web.servlet.setup.MockMvcBuilders
+            .standaloneSetup(new NoticeController(notices))
+            .setControllerAdvice(new com.gwonsystem.backend.exception.DevNoticeAuthExceptionHandler()).build();
+        String body="{\"title\":\"Test\",\"content\":\"Test\",\"category\":\"Test\"}";
+        when(notices.createNotice(any(),any())).thenThrow(
+            new org.springframework.security.authentication.AuthenticationCredentialsNotFoundException("internal detail"));
+        devMvc.perform(post("/api/notices").contentType("application/json").content(body))
+            .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.message").value("로그인이 필요합니다."));
+        doThrow(new org.springframework.security.access.AccessDeniedException("internal detail")).when(notices).createNotice(any(),any());
+        devMvc.perform(post("/api/notices").contentType("application/json").content(body))
+            .andExpect(status().isForbidden()).andExpect(jsonPath("$.message").value("권한이 없습니다."));
+    }
+    @Test void createKeepsRoleCsrfResponseAndPassesTheAuthenticatedPrincipal() throws Exception {
+        String body="{\"title\":\"Test\",\"content\":\"Test\",\"category\":\"Test\",\"authorId\":999}";
+        mvc.perform(post("/api/notices").with(csrf()).contentType("application/json").content(body)).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/notices").with(csrf()).with(user("associate").roles("ASSOCIATE")).contentType("application/json").content(body)).andExpect(status().isForbidden());
+        mvc.perform(post("/api/notices").with(user("admin").roles("SUPERVISOR")).contentType("application/json").content(body)).andExpect(status().isForbidden());
+        verifyNoInteractions(notices);
+        when(notices.createNotice(any(),any())).thenReturn(77L);
+        for(String role:List.of("REGULAR","SUPERVISOR")) {
+            mvc.perform(post("/api/notices").with(csrf()).with(user("writer").roles(role)).contentType("application/json").content(body))
+                .andExpect(status().isOk()).andExpect(content().string("77"));
+        }
+        verify(notices,times(2)).createNotice(any(),argThat(auth->"writer".equals(auth.getName())));
+    }
     @Test void publicListAndAuthenticatedContentPermissionsArePreserved() throws Exception {
         when(notices.getAllNotices()).thenReturn(List.of());mvc.perform(get("/api/notices")).andExpect(status().isOk());
         clearInvocations(notices);

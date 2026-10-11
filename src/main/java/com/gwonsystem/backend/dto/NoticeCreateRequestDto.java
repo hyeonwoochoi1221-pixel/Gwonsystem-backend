@@ -10,6 +10,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class NoticeCreateRequestDto {
 
+    // Legacy client compatibility only; dev never uses this to choose an author.
     private Long authorId;
 
     @NotBlank(message = "카테고리를 선택해 주세요.")
