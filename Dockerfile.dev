@@ -1,0 +1,24 @@
+# Development only. The existing Dockerfile remains the production entry point.
+FROM maven:3.9.16-eclipse-temurin-21 AS build
+WORKDIR /workspace
+COPY . .
+RUN javac -d /tmp/ca-verifier docker/dev/VerifySupabaseCa.java \
+    && java -cp /tmp/ca-verifier VerifySupabaseCa docker/dev/prod-ca-2021.crt \
+    && mvn clean package -DskipTests
+
+FROM eclipse-temurin:21-jre-jammy
+WORKDIR /app
+COPY --from=build /tmp/ca-verifier/VerifySupabaseCa.class /tmp/ca-verifier/VerifySupabaseCa.class
+COPY docker/dev/prod-ca-2021.crt /opt/dev-ca/prod-ca-2021.crt
+# changeit is the standard public JDK cacerts password, not an application secret.
+# Validate the DER certificate fingerprint in the runtime JVM BEFORE importing it.
+RUN java -cp /tmp/ca-verifier VerifySupabaseCa /opt/dev-ca/prod-ca-2021.crt \
+    && keytool -importcert -noprompt -trustcacerts -cacerts \
+       -storepass changeit -alias gwon-dev-supabase-root-2021 \
+       -file /opt/dev-ca/prod-ca-2021.crt \
+    && keytool -list -cacerts -storepass changeit -alias gwon-dev-supabase-root-2021 \
+    && rm -rf /tmp/ca-verifier
+ENV SPRING_PROFILES_ACTIVE=dev APP_DEPLOYMENT_ENV=dev
+COPY --from=build /workspace/target/*-SNAPSHOT.jar /app/app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
