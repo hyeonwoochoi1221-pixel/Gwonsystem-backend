@@ -54,4 +54,47 @@ class DevDataSourceGuardTest {
         var guarded=new DevDataSourceGuard.VerifiedDataSource(ds,"postgres","gwon_dev_app",DevEnvironmentGuardTest.REF,"gwon_dev_app","");
         assertThrows(SQLException.class,guarded::getConnection);verify(c,never()).createStatement();verify(c).close();
     }
+
+    private DevDataSourceGuard.VerifiedDataSource pooler(Connection c) throws Exception {
+        String host="aws-0-ap-northeast-1.pooler.supabase.com";
+        String url=DevEnvironmentGuardTest.settings().get("spring.datasource.url").toString()
+            .replace("db."+DevEnvironmentGuardTest.REF+".supabase.co",host);
+        when(c.getMetaData().getURL()).thenReturn(url);
+        var ds=mock(DataSource.class);when(ds.getConnection()).thenReturn(c);
+        return new DevDataSourceGuard.VerifiedDataSource(ds,"postgres","gwon_dev_app",DevEnvironmentGuardTest.REF,
+            "gwon_dev_app."+DevEnvironmentGuardTest.REF,host);
+    }
+
+    @Test void verifiedPoolerConnectionAcceptsEitherBackendTlsState() throws Exception {
+        for(boolean backendTls:new boolean[]{false,true}) {
+            var c=connection("postgres","gwon_dev_app",backendTls,false,false,false);
+            assertSame(c,pooler(c).getConnection());verify(c,never()).close();
+        }
+    }
+
+    @Test void poolerStillRejectsWrongDatabaseRoleAndExcessivePrivileges() throws Exception {
+        for(int reason=0;reason<7;reason++) {
+            var c=connection(reason==0?"other":"postgres",reason==1?"other":"gwon_dev_app",false,
+                reason==2,reason==3,reason==4);
+            when(c.createStatement().executeQuery(anyString()).getBoolean(7)).thenReturn(reason==5);
+            when(c.createStatement().executeQuery(anyString()).getBoolean(8)).thenReturn(reason==6);
+            assertThrows(SQLException.class,pooler(c)::getConnection);verify(c).close();
+        }
+    }
+
+    @Test void poolerCannotAcceptUnverifiedTlsOrCustomVerifierSettings() throws Exception {
+        for(String replacement:new String[]{"disable","allow","prefer","require","verify-ca"}) {
+            var c=connection("postgres","gwon_dev_app",false,false,false,false);
+            var guarded=pooler(c);
+            String url=c.getMetaData().getURL().replace("sslmode=verify-full","sslmode="+replacement);
+            when(c.getMetaData().getURL()).thenReturn(url);
+            assertThrows(SQLException.class,guarded::getConnection);verify(c,never()).createStatement();verify(c).close();
+        }
+        for(String option:new String[]{"&sslhostnameverifier=unapproved","&sslfactoryarg=unapproved"}) {
+            var c=connection("postgres","gwon_dev_app",false,false,false,false);
+            var guarded=pooler(c);String url=c.getMetaData().getURL()+option;
+            when(c.getMetaData().getURL()).thenReturn(url);
+            assertThrows(SQLException.class,guarded::getConnection);verify(c).close();
+        }
+    }
 }

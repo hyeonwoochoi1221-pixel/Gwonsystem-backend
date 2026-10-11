@@ -1,5 +1,8 @@
 -- READ ONLY. Run after 01 using the confirmed DEVELOPMENT administrator connection.
 -- Run again with the app's actual Session pooler login to check current_user/TLS.
+-- database_peer_tls is PostgreSQL-side TLS (pooler-to-DB for pooled sessions).
+-- false is allowed for the approved Session pooler and does NOT describe the
+-- client-to-pooler TLS handshake. Verify-full/CA/hostname are checked by pgJDBC.
 -- No CREATE/DROP probes, DML, nextval/setval, SET ROLE, or password/hash queries.
 -- Missing role produces no role rows / NULL checks: that is failure, not a pass.
 -- Expected: safe_role=true, permanent DDL flags=false, no permanent owner/membership rows, CRUD=true,
@@ -14,7 +17,7 @@ BEGIN TRANSACTION READ ONLY;
 SELECT pg_catalog.current_database(), session_user, current_user,
        pg_catalog.current_setting('search_path') AS session_search_path,
        pg_catalog.current_setting('server_version') AS server_version,
-       COALESCE((SELECT ssl FROM pg_catalog.pg_stat_ssl WHERE pid = pg_catalog.pg_backend_pid()), false) AS server_tls,
+       COALESCE((SELECT ssl FROM pg_catalog.pg_stat_ssl WHERE pid = pg_catalog.pg_backend_pid()), false) AS database_peer_tls,
        current_user = 'gwon_dev_app' AS actual_app_role;
 
 SELECT rolname, rolcanlogin,

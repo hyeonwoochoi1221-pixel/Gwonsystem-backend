@@ -42,8 +42,14 @@ public class DevDataSourceGuard {
         }
         private Connection verify(Connection c) throws SQLException {
             try {
-                DevEnvironmentGuard.validateDatabaseUrl(c.getMetaData().getURL(), user, ref, role, database, pooler);
-                verifyPeer(c, database, role);
+                String url = c.getMetaData().getURL();
+                DevEnvironmentGuard.validateDatabaseUrl(url, user, ref, role, database, pooler);
+                // Only an approved Session pooler terminates the client's TLS separately.
+                // pgJDBC verify-full + DefaultJavaSSLFactory must succeed before a
+                // connection exists; the metadata allowlist rechecks that configuration.
+                boolean sessionPooler = !pooler.isBlank()
+                    && pooler.equals(java.net.URI.create(url.substring(5)).getHost());
+                verifyPeer(c, database, role, !sessionPooler);
                 return c;
             } catch (Exception e) {
                 try { c.close(); } catch (SQLException ignored) { }
@@ -54,6 +60,10 @@ public class DevDataSourceGuard {
     }
 
     static void verifyPeer(Connection c, String database, String role) throws SQLException {
+        verifyPeer(c, database, role, true);
+    }
+
+    static void verifyPeer(Connection c, String database, String role, boolean requireBackendTls) throws SQLException {
         // This probe never changes schema/data. Restore connection state before handing it to JPA.
         boolean auto = c.getAutoCommit();
         boolean readOnly = c.isReadOnly();
@@ -78,9 +88,10 @@ public class DevDataSourceGuard {
                     + "pg_catalog.has_database_privilege(current_user,pg_catalog.current_database(),'CREATE'), "
                     + "EXISTS(SELECT 1 FROM pg_catalog.pg_roles r WHERE r.rolname<>current_user AND pg_catalog.pg_has_role(current_user,r.oid,'MEMBER')), "
                     + "pg_catalog.has_database_privilege(current_user,pg_catalog.current_database(),'TEMP')")) {
+                    // Column 3 is PostgreSQL-side TLS, NOT client-to-pooler TLS.
                     // Column 9 (TEMP) is informational: it grants no permanent schema DDL.
                     if (!r.next() || !database.equals(r.getString(1)) || !role.equals(r.getString(2))
-                        || !r.getBoolean(3) || r.getBoolean(4) || r.getBoolean(5) || r.getBoolean(6) || r.getBoolean(7) || r.getBoolean(8))
+                        || (requireBackendTls && !r.getBoolean(3)) || r.getBoolean(4) || r.getBoolean(5) || r.getBoolean(6) || r.getBoolean(7) || r.getBoolean(8))
                         throw new SQLException("Development database verification refused");
                 }
             }
