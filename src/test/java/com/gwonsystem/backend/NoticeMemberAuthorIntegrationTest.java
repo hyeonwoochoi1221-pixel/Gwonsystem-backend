@@ -90,7 +90,7 @@ class NoticeMemberAuthorIntegrationTest {
                 var response=new com.fasterxml.jackson.databind.ObjectMapper().valueToTree(detail);
                 var keys=new HashSet<String>();response.fieldNames().forEachRemaining(keys::add);
                 assertEquals(Set.of("id","category","title","content","viewCount","isPinned","date"),keys);
-                service.deleteNotice(legacy.getId());service.deleteNotice(id);
+                service.deleteNotice(legacy.getId(),auth);service.deleteNotice(id,auth);
                 assertEquals(0,notices.count());assertEquals(1,members.count());
             }
             // Missing/wrong schema is never repaired by startup check.

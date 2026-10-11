@@ -24,10 +24,10 @@ class NoticeHttpTest {
     @MockitoBean NoticeService notices;
     @MockitoBean OAuth2SuccessHandler oauth;
     @MockitoBean ClientRegistrationRepository registrations;
-    @Test void devNoticeAuthenticationFailuresHaveSafeHttpResponses() throws Exception {
+    @Test void noticeAuthenticationFailuresHaveSafeHttpResponses() throws Exception {
         var devMvc=org.springframework.test.web.servlet.setup.MockMvcBuilders
             .standaloneSetup(new NoticeController(notices))
-            .setControllerAdvice(new com.gwonsystem.backend.exception.DevNoticeAuthExceptionHandler()).build();
+            .setControllerAdvice(new com.gwonsystem.backend.exception.NoticeAuthExceptionHandler()).build();
         String body="{\"title\":\"Test\",\"content\":\"Test\",\"category\":\"Test\"}";
         when(notices.createNotice(any(),any())).thenThrow(
             new org.springframework.security.authentication.AuthenticationCredentialsNotFoundException("internal detail"));
@@ -36,6 +36,14 @@ class NoticeHttpTest {
         doThrow(new org.springframework.security.access.AccessDeniedException("internal detail")).when(notices).createNotice(any(),any());
         devMvc.perform(post("/api/notices").contentType("application/json").content(body))
             .andExpect(status().isForbidden()).andExpect(jsonPath("$.message").value("권한이 없습니다."));
+        doThrow(new org.springframework.security.authentication.AuthenticationCredentialsNotFoundException("internal detail"))
+            .when(notices).deleteNotice(anyLong(),any());
+        devMvc.perform(delete("/api/notices/1")).andExpect(status().isUnauthorized())
+            .andExpect(jsonPath("$.message").value("로그인이 필요합니다."));
+        doThrow(new org.springframework.security.access.AccessDeniedException("internal detail"))
+            .when(notices).deleteNotice(anyLong(),any());
+        devMvc.perform(delete("/api/notices/1")).andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.message").value("권한이 없습니다."));
     }
     @Test void createKeepsRoleCsrfResponseAndPassesTheAuthenticatedPrincipal() throws Exception {
         String body="{\"title\":\"Test\",\"content\":\"Test\",\"category\":\"Test\",\"authorId\":999}";
@@ -58,6 +66,8 @@ class NoticeHttpTest {
         mvc.perform(delete("/api/notices/1").with(user("regular").roles("REGULAR"))).andExpect(status().isForbidden());
         verifyNoInteractions(notices);
         mvc.perform(delete("/api/notices/1").with(csrf()).with(user("regular").roles("REGULAR"))).andExpect(status().isNoContent());
-        verify(notices).deleteNotice(1L);
+        verify(notices).deleteNotice(eq(1L),argThat(auth->"regular".equals(auth.getName())));
+        mvc.perform(delete("/api/notices/1").with(csrf()).with(user("admin").roles("SUPERVISOR"))).andExpect(status().isNoContent());
+        verify(notices).deleteNotice(eq(1L),argThat(auth->"admin".equals(auth.getName())));
     }
 }
