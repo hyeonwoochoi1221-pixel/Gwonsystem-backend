@@ -37,8 +37,9 @@ public class NoticeController {
     @Operation(summary = "공지사항 등록", description = "새로운 공지사항을 생성합니다.")
     @PostMapping
     // @RequireContentManager // 토큰 기반 세션 연동 완료 시점에 주석 해제
-    public ResponseEntity<Long> createNotice(@Valid @RequestBody NoticeCreateRequestDto requestDto) {
-        Long noticeId = noticeService.createNotice(requestDto);
+    public ResponseEntity<Long> createNotice(@Valid @RequestBody NoticeCreateRequestDto requestDto,
+            org.springframework.security.core.Authentication authentication) {
+        Long noticeId = noticeService.createNotice(requestDto, authentication);
         return ResponseEntity.ok(noticeId);
     }
 

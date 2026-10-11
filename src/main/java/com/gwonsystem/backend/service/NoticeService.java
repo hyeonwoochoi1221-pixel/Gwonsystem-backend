@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 public class NoticeService {
 
     private final NoticeRepository noticeRepository;
+    private final NoticeAuthorPolicy authorPolicy;
 
     // 공지사항 전체 목록 조회
     @Transactional(readOnly = true)
@@ -42,17 +43,19 @@ public class NoticeService {
 
     // 신규 공지사항 등록
     @Transactional
-    public Long createNotice(NoticeCreateRequestDto requestDto) {
+    public Long createNotice(NoticeCreateRequestDto requestDto, org.springframework.security.core.Authentication authentication) {
 //        log.info("새로운 공지사항 등록 요청 - 제목: {}", requestDto.getTitle());
 
+        NoticeAuthorPolicy.Author author=authorPolicy.resolve(requestDto,authentication);
         Notice notice = Notice.builder()
-                .authorId(requestDto.getAuthorId())
+                .authorId(author.legacyUserId())
                 .category(requestDto.getCategory())
                 .title(requestDto.getTitle())
                 .content(requestDto.getContent())
                 .isPinned(requestDto.getIsPinned())
                 .build();
 
+        if (author.memberId()!=null) return authorPolicy.create(notice,author);
         Notice savedNotice = noticeRepository.save(notice);
         return savedNotice.getId();
     }
