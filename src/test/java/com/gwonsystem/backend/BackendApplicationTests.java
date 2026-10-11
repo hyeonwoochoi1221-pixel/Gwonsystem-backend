@@ -30,6 +30,10 @@ class BackendApplicationTests {
         factory.setJpaPropertyMap(Map.of("hibernate.hbm2ddl.auto","create","hibernate.show_sql","false",
             "hibernate.physical_naming_strategy","org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy"));
         factory.afterPropertiesSet();factory.destroy();
+        // Non-dev author readiness fixture, only in this new disposable test cluster.
+        var jdbc=new org.springframework.jdbc.core.JdbcTemplate(ds);
+        jdbc.execute("ALTER TABLE public.notices ADD COLUMN author_member_id BIGINT NOT NULL");
+        jdbc.execute("ALTER TABLE public.notices ADD CONSTRAINT notices_author_member_id_fkey FOREIGN KEY(author_member_id) REFERENCES public.members(id) ON DELETE RESTRICT ON UPDATE NO ACTION NOT DEFERRABLE");
         registry.add("spring.datasource.url",()->url);
         registry.add("spring.datasource.username",()->"postgres");
         registry.add("spring.datasource.password",()->"");

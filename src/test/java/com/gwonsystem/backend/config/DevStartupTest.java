@@ -54,11 +54,11 @@ class DevStartupTest {
             verify(c.getBean(JdbcTemplate.class),never()).execute(anyString());
         }
     }
-    @Test void productionRetainsTheExistingDdlRunner() {
+    @Test void productionNeverRegistersADdlRunner() {
         try(var c=new org.springframework.context.annotation.AnnotationConfigApplicationContext()) {
             c.getEnvironment().setActiveProfiles("prod");c.register(ProbeConfig.class);c.refresh();
-            var runner=c.getBean(ApplicationRunner.class);runner.run(null);
-            verify(c.getBean(JdbcTemplate.class)).execute("ALTER TABLE IF EXISTS company_events ALTER COLUMN end_date DROP NOT NULL");
+            assertTrue(c.getBeansOfType(ApplicationRunner.class).isEmpty());
+            verify(c.getBean(JdbcTemplate.class),never()).execute(anyString());
         } catch(Exception e) { throw new AssertionError(e); }
     }
     @Test void devServletBootNeedsNoSmtpOrOauthCredentialsAndExposesOnlySafeHealth() throws Exception {

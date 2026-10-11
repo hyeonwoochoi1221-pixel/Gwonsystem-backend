@@ -34,13 +34,11 @@ class DevNoticeAuthorPolicyTest {
             new AnonymousAuthenticationToken("key","anonymous",List.of(new SimpleGrantedAuthority("ROLE_ANONYMOUS")))));
         verifyNoInteractions(members);
     }
-    @Test void missingSchemaBlocksDevAndLegacyPolicyDoesNotNeedNewColumn() {
+    @Test void missingSchemaBlocksDev() {
         var jdbc=mock(JdbcTemplate.class);var policy=new DevNoticeAuthorPolicy(mock(MemberRepository.class),jdbc);
         when(jdbc.queryForObject(anyString(),eq(Boolean.class))).thenReturn(false);
         assertThrows(IllegalStateException.class,policy::afterPropertiesSet);
         when(jdbc.queryForObject(anyString(),eq(Boolean.class))).thenReturn(true);policy.afterPropertiesSet();
         verify(jdbc,never()).update(anyString(),any(Object[].class));
-        var request=new NoticeCreateRequestDto();request.setAuthorId(42L);
-        assertEquals(new NoticeAuthorPolicy.Author(42L,null),new LegacyNoticeAuthorPolicy().resolve(request,null));
     }
 }

@@ -6,3 +6,5 @@ logs
 .env.*
 **/application-local.properties
 *.log
+# Local PostgreSQL validation tools and evidence are not application build inputs.
+docs/sql/prod-rebuild/validation-*/

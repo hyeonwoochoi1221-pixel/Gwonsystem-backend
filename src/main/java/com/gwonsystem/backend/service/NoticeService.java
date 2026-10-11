@@ -48,20 +48,20 @@ public class NoticeService {
 
         NoticeAuthorPolicy.Author author=authorPolicy.resolve(requestDto,authentication);
         Notice notice = Notice.builder()
-                .authorId(author.legacyUserId())
+                .authorId(null)
                 .category(requestDto.getCategory())
                 .title(requestDto.getTitle())
                 .content(requestDto.getContent())
                 .isPinned(requestDto.getIsPinned())
                 .build();
 
-        if (author.memberId()!=null) return authorPolicy.create(notice,author);
-        Notice savedNotice = noticeRepository.save(notice);
-        return savedNotice.getId();
+        if (author.memberId()==null) throw new IllegalStateException("Authenticated member author required");
+        return authorPolicy.create(notice,author);
     }
 
     @Transactional
-    public void deleteNotice(Long id) {
+    public void deleteNotice(Long id, org.springframework.security.core.Authentication authentication) {
+        authorPolicy.resolve(null, authentication);
 //        log.info("공지사항 삭제 요청 - ID: {}", id);
         Notice notice = noticeRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("삭제할 공지사항이 없습니다: " + id));

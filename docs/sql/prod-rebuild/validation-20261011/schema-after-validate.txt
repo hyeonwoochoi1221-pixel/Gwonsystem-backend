@@ -1,0 +1,126 @@
+company_events|id|bigint|NO|null|YES|
+company_events|title|character varying|NO|null|NO|
+company_events|category|character varying|NO|null|NO|
+company_events|start_date|date|NO|null|NO|
+company_events|end_date|date|YES|null|NO|
+company_events|location|character varying|NO|null|NO|
+company_events|location_detail|character varying|YES|null|NO|
+company_events|place_id|character varying|YES|null|NO|
+company_events|description|character varying|NO|null|NO|
+gallery_photos|id|bigint|NO|null|YES|
+gallery_photos|title|character varying|NO|null|NO|
+gallery_photos|description|character varying|NO|null|NO|
+gallery_photos|content_type|character varying|NO|null|NO|
+gallery_photos|image|bytea|NO|null|NO|
+gallery_photos|storage_path|character varying|YES|null|NO|
+gallery_photos|created_at|timestamp with time zone|NO|null|NO|
+gallery_photos|created_by|character varying|NO|null|NO|
+home_banners|id|bigint|NO|null|YES|
+home_banners|title|character varying|NO|null|NO|
+home_banners|description|character varying|NO|null|NO|
+home_banners|content_type|character varying|NO|null|NO|
+home_banners|image|bytea|NO|null|NO|
+home_banners|created_at|timestamp with time zone|NO|null|NO|
+home_banners|created_by|character varying|NO|null|NO|
+members|id|bigint|NO|null|YES|
+members|username|character varying|NO|null|NO|
+members|password|character varying|YES|null|NO|
+members|email|character varying|NO|null|NO|
+members|provider|character varying|YES|null|NO|
+members|provider_id|character varying|YES|null|NO|
+members|last_name|character varying|NO|null|NO|
+members|first_name|character varying|NO|null|NO|
+members|phone|character varying|YES|null|NO|
+members|gender|character varying|YES|null|NO|
+members|birth_date|date|YES|null|NO|
+members|zipcode|character varying|YES|null|NO|
+members|address|character varying|YES|null|NO|
+members|detail_address|character varying|YES|null|NO|
+members|workplace_name|character varying|YES|null|NO|
+members|department_name|character varying|YES|null|NO|
+members|position|character varying|YES|null|NO|
+members|workplace_phone|character varying|YES|null|NO|
+members|role|character varying|NO|'ROLE_ASSOCIATE'::character varying|NO|
+members|terms_agreed|boolean|NO|true|NO|
+members|privacy_agreed|boolean|NO|true|NO|
+members|marketing_agreed|boolean|NO|false|NO|
+members|privacy_agreed_at|timestamp without time zone|YES|null|NO|
+members|created_at|timestamp without time zone|YES|null|NO|
+members|updated_at|timestamp without time zone|YES|null|NO|
+notices|id|bigint|NO|null|YES|
+notices|author_id|bigint|YES|null|NO|
+notices|author_member_id|bigint|NO|null|NO|
+notices|category|character varying|YES|null|NO|
+notices|title|character varying|NO|null|NO|
+notices|content|text|NO|null|NO|
+notices|view_count|integer|YES|0|NO|
+notices|is_pinned|boolean|YES|false|NO|
+notices|created_at|timestamp without time zone|YES|null|NO|
+notices|updated_at|timestamp without time zone|YES|null|NO|
+test_users|id|bigint|NO|null|YES|
+test_users|username|character varying|NO|null|NO|
+test_users|email|character varying|NO|null|NO|
+test_users|created_at|timestamp without time zone|YES|null|NO|
+users|id|bigint|NO|null|NO|
+users|users_pkey|PRIMARY KEY (id)|t|f|
+members|members_email_key|UNIQUE (email)|t|f|
+members|members_pkey|PRIMARY KEY (id)|t|f|
+members|members_role_check|CHECK (((role)::text = ANY ((ARRAY['ROLE_ASSOCIATE'::character varying, 'ROLE_REGULAR'::character varying, 'ROLE_SUPERVISOR'::character varying])::text[])))|t|f|
+members|members_username_key|UNIQUE (username)|t|f|
+notices|notices_author_id_fkey|FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL|t|f|
+notices|notices_author_member_id_fkey|FOREIGN KEY (author_member_id) REFERENCES members(id) ON DELETE RESTRICT|t|f|
+notices|notices_pkey|PRIMARY KEY (id)|t|f|
+company_events|company_events_pkey|PRIMARY KEY (id)|t|f|
+gallery_photos|gallery_photos_pkey|PRIMARY KEY (id)|t|f|
+home_banners|home_banners_pkey|PRIMARY KEY (id)|t|f|
+test_users|test_users_email_key|UNIQUE (email)|t|f|
+test_users|test_users_pkey|PRIMARY KEY (id)|t|f|
+company_events|company_events_pkey|CREATE UNIQUE INDEX company_events_pkey ON public.company_events USING btree (id)|
+gallery_photos|gallery_photos_pkey|CREATE UNIQUE INDEX gallery_photos_pkey ON public.gallery_photos USING btree (id)|
+home_banners|home_banners_pkey|CREATE UNIQUE INDEX home_banners_pkey ON public.home_banners USING btree (id)|
+members|members_email_key|CREATE UNIQUE INDEX members_email_key ON public.members USING btree (email)|
+members|members_pkey|CREATE UNIQUE INDEX members_pkey ON public.members USING btree (id)|
+members|members_username_key|CREATE UNIQUE INDEX members_username_key ON public.members USING btree (username)|
+notices|notices_author_id_idx|CREATE INDEX notices_author_id_idx ON public.notices USING btree (author_id)|
+notices|notices_author_member_id_idx|CREATE INDEX notices_author_member_id_idx ON public.notices USING btree (author_member_id)|
+notices|notices_pkey|CREATE UNIQUE INDEX notices_pkey ON public.notices USING btree (id)|
+test_users|test_users_email_key|CREATE UNIQUE INDEX test_users_email_key ON public.test_users USING btree (email)|
+test_users|test_users_pkey|CREATE UNIQUE INDEX test_users_pkey ON public.test_users USING btree (id)|
+users|users_pkey|CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)|
+company_events|10|{isolated_admin=arwdDxtm/isolated_admin,isolated_app=arwd/isolated_admin}|t|t|
+company_events_id_seq|10|{isolated_admin=rwU/isolated_admin,isolated_app=U/isolated_admin}|f|f|
+company_events_pkey|10|null|f|f|
+gallery_photos|10|{isolated_admin=arwdDxtm/isolated_admin,isolated_app=arwd/isolated_admin}|t|t|
+gallery_photos_id_seq|10|{isolated_admin=rwU/isolated_admin,isolated_app=U/isolated_admin}|f|f|
+gallery_photos_pkey|10|null|f|f|
+home_banners|10|{isolated_admin=arwdDxtm/isolated_admin,isolated_app=arwd/isolated_admin}|t|t|
+home_banners_id_seq|10|{isolated_admin=rwU/isolated_admin,isolated_app=U/isolated_admin}|f|f|
+home_banners_pkey|10|null|f|f|
+members|10|{isolated_admin=arwdDxtm/isolated_admin,isolated_app=arwd/isolated_admin}|t|t|
+members_email_key|10|null|f|f|
+members_id_seq|10|{isolated_admin=rwU/isolated_admin,isolated_app=U/isolated_admin}|f|f|
+members_pkey|10|null|f|f|
+members_username_key|10|null|f|f|
+notices|10|{isolated_admin=arwdDxtm/isolated_admin,isolated_app=arwd/isolated_admin}|t|t|
+notices_author_id_idx|10|null|f|f|
+notices_author_member_id_idx|10|null|f|f|
+notices_id_seq|10|{isolated_admin=rwU/isolated_admin,isolated_app=U/isolated_admin}|f|f|
+notices_pkey|10|null|f|f|
+test_users|10|{isolated_admin=arwdDxtm/isolated_admin,isolated_app=arwd/isolated_admin}|t|t|
+test_users_email_key|10|null|f|f|
+test_users_id_seq|10|{isolated_admin=rwU/isolated_admin,isolated_app=U/isolated_admin}|f|f|
+test_users_pkey|10|null|f|f|
+users|10|null|f|f|
+users_pkey|10|null|f|f|
+company_events|backend_crud|{isolated_app}|ALL|true|true|
+gallery_photos|backend_crud|{isolated_app}|ALL|true|true|
+home_banners|backend_crud|{isolated_app}|ALL|true|true|
+members|backend_crud|{isolated_app}|ALL|true|true|
+notices|backend_crud|{isolated_app}|ALL|true|true|
+test_users|backend_crud|{isolated_app}|ALL|true|true|
+company_events_id_seq|bigint|1|1|9223372036854775807|1|f|
+gallery_photos_id_seq|bigint|1|1|9223372036854775807|1|f|
+home_banners_id_seq|bigint|1|1|9223372036854775807|1|f|
+members_id_seq|bigint|1|1|9223372036854775807|1|f|
+notices_id_seq|bigint|1|1|9223372036854775807|1|f|
+test_users_id_seq|bigint|1|1|9223372036854775807|1|f|

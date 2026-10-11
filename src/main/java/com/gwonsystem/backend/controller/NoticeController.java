@@ -46,8 +46,9 @@ public class NoticeController {
     @Operation(summary = "공지사항 삭제", description = "공지사항 ID를 기반으로 해당 공지를 삭제합니다.")
     @DeleteMapping("/{id}")
     // @RequireContentManager // ★ 403 차단 원인이었던 어노테이션을 비활성화
-    public ResponseEntity<Void> deleteNotice(@PathVariable Long id) {
-        noticeService.deleteNotice(id);
+    public ResponseEntity<Void> deleteNotice(@PathVariable Long id,
+            org.springframework.security.core.Authentication authentication) {
+        noticeService.deleteNotice(id, authentication);
         return ResponseEntity.noContent().build();
     }
 }
